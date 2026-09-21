@@ -3,8 +3,8 @@ import "./globals.css";
 
 // Metadata is the browser tab title and description, not visible page content.
 export const metadata: Metadata = {
-  title: "Mini Robinhood | Demo Dashboard",
-  description: "A learning project for a stock portfolio dashboard.",
+  title: "Stock News Aggregator | Market Dashboard",
+  description: "Track a stock portfolio alongside relevant market news.",
 };
 
 /**

@@ -11,7 +11,7 @@ out/
 .DS_Store
 *.log
 
-# Internal planning notes stay local and are not part of the public project.
-PLAN.md
+# Internal learning notes stay local and are not part of the public project.
+INFO.md
 PROGRESS.md
 .vercel

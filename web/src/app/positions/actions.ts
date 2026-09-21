@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { ensureRecentDailyPrice } from "@/lib/prices/refresh-server";
+import {
+  ensureRecentDailyPrice,
+  refreshAndStoreDailyPrices,
+} from "@/lib/prices/refresh-server";
 import type { ActionState } from "@/lib/positions";
 
 const symbolPattern = /^[A-Z][A-Z0-9.-]{0,5}$/;
@@ -130,4 +133,49 @@ export async function deletePosition(
 
   revalidatePath("/");
   return { message: "The position was removed." };
+}
+
+/**
+ * Refresh every symbol in the signed-in user's portfolio. The browser never
+ * receives the provider key: this action reads the user's RLS-filtered rows,
+ * then calls the existing server-only price provider and shared cache.
+ */
+export async function refreshAllPrices(
+  _previousState: ActionState,
+  _formData: FormData,
+): Promise<ActionState> {
+  // React supplies both values to every action-state handler. This refresh
+  // action does not need form fields because it reads symbols from the account.
+  void _previousState;
+  void _formData;
+
+  const { supabase, user } = await authenticatedClient();
+  if (!user) return { error: "Your session expired. Sign in again." };
+
+  const { data, error } = await supabase
+    .from("positions")
+    .select("symbol")
+    .eq("user_id", user.id);
+  if (error) return { error: error.message };
+
+  const symbols = [...new Set((data ?? []).map((row) => String(row.symbol)))];
+  if (symbols.length === 0) {
+    return { message: "Add a holding before refreshing prices." };
+  }
+
+  try {
+    const results = await refreshAndStoreDailyPrices(symbols);
+    const updated = results.filter((result) => result.status === "updated").length;
+    const failed = results.length - updated;
+
+    revalidatePath("/");
+    if (failed > 0) {
+      return {
+        message: `Refreshed ${updated} of ${results.length} holdings. ${failed} could not be updated.`,
+      };
+    }
+    return { message: `Refreshed all ${updated} holdings.` };
+  } catch {
+    return { error: "Prices could not be refreshed right now. Please try again later." };
+  }
 }

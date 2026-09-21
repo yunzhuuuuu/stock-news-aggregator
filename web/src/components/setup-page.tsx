@@ -2,7 +2,7 @@ export default function SetupPage({ databaseError }: { databaseError?: string })
   return (
     <main className="setup-shell">
       <section className="setup-card">
-        <p className="eyebrow">STAGE B · ONE-TIME SETUP</p>
+        <p className="eyebrow">ACCOUNT SETUP</p>
         <h1>Connect Supabase to continue.</h1>
         <p className="setup-copy">
           The application code is ready, but it needs your own Supabase project

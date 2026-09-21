@@ -5,6 +5,7 @@ import { logout } from "@/app/auth/actions";
 import {
   addPosition,
   deletePosition,
+  refreshAllPrices,
   updatePosition,
 } from "@/app/positions/actions";
 import {
@@ -20,7 +21,7 @@ import {
   type NewsApiResponse,
 } from "@/lib/news/client";
 
-type DetailTab = "overview" | "news";
+type DetailTab = "overview" | "signal" | "news";
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -47,6 +48,11 @@ function formatPercent(value: string | null) {
   if (value === null) return null;
   const percent = Number(value);
   return `${percent > 0 ? "+" : ""}${percent.toFixed(2)}%`;
+}
+
+function valueTone(value: string | null) {
+  if (value === null || Number(value) === 0) return "value-neutral";
+  return Number(value) > 0 ? "value-positive" : "value-negative";
 }
 
 const dateTime = new Intl.DateTimeFormat("en-US", {
@@ -280,6 +286,72 @@ function DeletePositionForm({ position }: { position: Position }) {
   );
 }
 
+function SignalPanel({ position }: { position: PositionView }) {
+  const invalidSymbol = position.priceStatus === "invalid_symbol";
+  const insufficientData = position.metrics.signal === "INSUFFICIENT_DATA";
+  const signalLabel = invalidSymbol
+    ? "UNAVAILABLE"
+    : insufficientData
+      ? "PENDING"
+      : position.metrics.signal;
+  const signalClass = invalidSymbol || insufficientData
+    ? "signal-neutral"
+    : position.metrics.signal === "BUY"
+      ? "signal-buy"
+      : position.metrics.signal === "SELL"
+        ? "signal-sell"
+        : "signal-hold";
+
+  return (
+    <div className="signal-panel">
+      <div className="signal-summary">
+        <div>
+          <span className="signal-label">Current signal</span>
+          <strong className={`signal-badge ${signalClass}`}>{signalLabel}</strong>
+        </div>
+        <p>
+          {invalidSymbol
+            ? "Correct the stock symbol before calculating a signal."
+            : insufficientData
+              ? `${position.metrics.historyCount} of 20 daily closes are available. The app waits for enough data instead of guessing.`
+              : "A comparison of short-term and longer-term price momentum."}
+        </p>
+      </div>
+
+      <dl className="signal-metrics">
+        <div>
+          <dt>5-day average</dt>
+          <dd>{formatMoney(position.metrics.sma5)}</dd>
+          <small>SMA5</small>
+        </div>
+        <div>
+          <dt>20-day average</dt>
+          <dd>{formatMoney(position.metrics.sma20)}</dd>
+          <small>SMA20</small>
+        </div>
+        <div>
+          <dt>Difference</dt>
+          <dd className={valueTone(position.metrics.signalDifferencePercent)}>
+            {formatPercent(position.metrics.signalDifferencePercent) ?? "Not available"}
+          </dd>
+          <small>SMA5 vs. SMA20</small>
+        </div>
+      </dl>
+
+      <div className="signal-rule">
+        <strong>How the signal is assigned</strong>
+        <p>
+          BUY when SMA5 is more than 2% above SMA20. SELL when it is more than
+          2% below. Otherwise, the signal is HOLD.
+        </p>
+      </div>
+      <p className="signal-footnote">
+        Demonstration rule only — not investment advice.
+      </p>
+    </div>
+  );
+}
+
 /**
  * Positions arrive as server-rendered props after Supabase has applied RLS.
  * Local state remembers only which row/tab/form the user is looking at; the
@@ -300,6 +372,10 @@ export default function Dashboard({
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [refreshState, refreshAction, refreshPending] = useActionState(
+    refreshAllPrices,
+    emptyActionState,
+  );
   const [addState, addAction, addPending] = useActionState(
     addPosition,
     emptyActionState,
@@ -313,9 +389,9 @@ export default function Dashboard({
     <div className="app">
       <header className="topbar">
         <div className="shell topbar-inner">
-          <div className="brand" aria-label="Mini Robinhood">
-            <span className="brand-mark" aria-hidden="true">M</span>
-            <span>mini robinhood</span>
+          <div className="brand" aria-label="Stock News Aggregator">
+            <span className="brand-mark" aria-hidden="true">S</span>
+            <span>Stock News Aggregator</span>
           </div>
           <div className="account-area">
             <span className="account-email">{userEmail}</span>
@@ -329,30 +405,31 @@ export default function Dashboard({
       <main className="shell main-content">
         <section className="intro" aria-labelledby="page-title">
           <div>
-            <p className="eyebrow">YOUR DASHBOARD</p>
-            <h1 id="page-title">Your saved portfolio.</h1>
+            <p className="eyebrow">MARKET INTELLIGENCE</p>
+            <h1 id="page-title">My Portfolio</h1>
             <p className="intro-copy">
-              Your holdings are stored in Supabase and protected by your account.
+              Track your U.S. stock positions, closing-price performance, and the
+              latest company news in one focused workspace.
             </p>
           </div>
-          <span className="stage-pill">Stage D · Portfolio news</span>
+          <form className="refresh-form" action={refreshAction}>
+            <button
+              className="button button-primary refresh-button"
+              disabled={refreshPending}
+            >
+              {refreshPending ? "Refreshing…" : "Refresh All"}
+            </button>
+            <Feedback state={refreshState} />
+          </form>
         </section>
-
-        <div className="connected-notice" role="status">
-          <span className="notice-icon" aria-hidden="true">✓</span>
-          <p>
-            <strong>Account connected.</strong> Row Level Security limits database
-            access to positions owned by the signed-in user.
-          </p>
-        </div>
 
         {priceCacheUnavailable && (
           <div className="price-cache-notice" role="status">
             <span className="notice-icon" aria-hidden="true">!</span>
             <p>
-              <strong>The daily-price cache is not ready yet.</strong> Run the
-              Stage C database migration to enable cached closing prices. Your
-              saved holdings remain available.
+              <strong>Market data is not ready yet.</strong> Complete the daily-price
+              database setup to enable cached closing prices. Your saved holdings
+              remain available.
             </p>
           </div>
         )}
@@ -451,15 +528,23 @@ export default function Dashboard({
                       {position.symbol.slice(0, 1)}
                     </span>
                     <span className="holding-name">
-                      <strong>{position.symbol}</strong>
-                      <small>
+                      <span className="holding-title-row">
+                        <strong>{position.symbol}</strong>
+                        <small>{formatMoney(position.metrics.latestClose)}</small>
+                      </span>
+                      <small className="holding-meta">
                         {position.priceStatus === "invalid_symbol"
                           ? "Invalid symbol"
-                          : "Saved position"}
+                          : `${formatQuantity(position.quantity)} shares · Avg. ${money.format(Number(position.average_cost))}`}
                       </small>
                     </span>
-                    <span className="holding-quantity">
-                      {formatQuantity(position.quantity)} shares
+                    <span className="holding-values">
+                      <strong>{formatMoney(position.metrics.marketValue)}</strong>
+                      <small className={valueTone(position.metrics.unrealizedProfitLoss)}>
+                        {position.metrics.unrealizedProfitLoss === null
+                          ? "P/L unavailable"
+                          : `${formatSignedMoney(position.metrics.unrealizedProfitLoss)} P/L`}
+                      </small>
                     </span>
                   </button>
                 ))}
@@ -476,8 +561,9 @@ export default function Dashboard({
                 <div className="detail-header">
                   <div>
                     <p className="eyebrow">HOLDING DETAILS</p>
-                    <h2 id="details-title">{selectedPosition.symbol}</h2>
-                    <p className="detail-symbol">Private portfolio position</p>
+                    <h2 className="detail-stock-name" id="details-title">
+                      {selectedPosition.symbol}
+                    </h2>
                   </div>
                   <div className="detail-actions">
                     <button
@@ -524,6 +610,17 @@ export default function Dashboard({
                     Overview
                   </button>
                   <button
+                    id="signal-tab"
+                    className={activeTab === "signal" ? "tab tab-active" : "tab"}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === "signal"}
+                    aria-controls="details-panel"
+                    onClick={() => setActiveTab("signal")}
+                  >
+                    Signal
+                  </button>
+                  <button
                     id="news-tab"
                     className={activeTab === "news" ? "tab tab-active" : "tab"}
                     type="button"
@@ -540,7 +637,7 @@ export default function Dashboard({
                   className="tab-content"
                   id="details-panel"
                   role="tabpanel"
-                  aria-labelledby={activeTab === "overview" ? "overview-tab" : "news-tab"}
+                  aria-labelledby={`${activeTab}-tab`}
                 >
                   {activeTab === "overview" ? (
                     <div>
@@ -572,7 +669,12 @@ export default function Dashboard({
                         </div>
                         <div>
                           <dt>Unrealized P/L</dt>
-                          <dd>
+                          <dd
+                            className={
+                              "fact-profit-loss " +
+                              valueTone(selectedPosition.metrics.unrealizedProfitLoss)
+                            }
+                          >
                             {formatSignedMoney(
                               selectedPosition.metrics.unrealizedProfitLoss,
                             )}
@@ -584,37 +686,9 @@ export default function Dashboard({
                           </dd>
                         </div>
                       </dl>
-                      <div className="coming-box">
-                        <strong>
-                          {selectedPosition.priceStatus === "invalid_symbol"
-                            ? "Signal unavailable"
-                            : selectedPosition.metrics.signal === "INSUFFICIENT_DATA"
-                            ? "Signal: insufficient data"
-                            : `Signal: ${selectedPosition.metrics.signal}`}
-                        </strong>
-                        {selectedPosition.priceStatus === "invalid_symbol" ? (
-                          <p>
-                            The app will not calculate a signal for an invalid symbol.
-                          </p>
-                        ) : selectedPosition.metrics.signal === "INSUFFICIENT_DATA" ? (
-                          <p>
-                            {selectedPosition.metrics.historyCount} of 20 daily closes
-                            are available. The app will not guess a signal.
-                          </p>
-                        ) : (
-                          <p>
-                            SMA5 {formatMoney(selectedPosition.metrics.sma5)} · SMA20{" "}
-                            {formatMoney(selectedPosition.metrics.sma20)} · difference{" "}
-                            {formatPercent(
-                              selectedPosition.metrics.signalDifferencePercent,
-                            )}. BUY is above +2%; SELL is below -2%; otherwise HOLD.
-                          </p>
-                        )}
-                        <p className="signal-disclaimer">
-                          Demonstration rule only — not investment advice.
-                        </p>
-                      </div>
                     </div>
+                  ) : activeTab === "signal" ? (
+                    <SignalPanel position={selectedPosition} />
                   ) : (
                     <NewsPanel
                       key={selectedPosition.symbol}
@@ -635,8 +709,8 @@ export default function Dashboard({
         </div>
 
         <footer className="footer">
-          Mini Robinhood is a learning prototype. No brokerage connection or
-          investment advice.
+          Stock News Aggregator is a learning prototype. No brokerage connection
+          or investment advice.
         </footer>
       </main>
     </div>

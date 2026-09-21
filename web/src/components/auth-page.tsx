@@ -20,11 +20,11 @@ export default function AuthPage({ authError }: { authError?: string }) {
   return (
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="auth-title">
-        <div className="brand auth-brand" aria-label="Mini Robinhood">
-          <span className="brand-mark" aria-hidden="true">M</span>
-          <span>mini robinhood</span>
+        <div className="brand auth-brand" aria-label="Stock News Aggregator">
+          <span className="brand-mark" aria-hidden="true">S</span>
+          <span>Stock News Aggregator</span>
         </div>
-        <p className="eyebrow">STAGE B · ACCOUNTS</p>
+        <p className="eyebrow">SECURE PORTFOLIO ACCESS</p>
         <h1 id="auth-title">Save your portfolio.</h1>
         <p className="auth-copy">
           Sign in to see only the holdings saved to your account.
@@ -58,7 +58,7 @@ export default function AuthPage({ authError }: { authError?: string }) {
         </form>
 
         <div className="auth-separator" aria-hidden="true">
-          <span>New to Mini Robinhood?</span>
+          <span>New to Stock News Aggregator?</span>
         </div>
         <Link className="button button-light auth-submit auth-back-link" href="/signup">
           Create account

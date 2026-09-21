@@ -19,9 +19,9 @@ export default function SignupPage() {
     return (
       <main className="auth-shell">
         <section className="auth-card" aria-labelledby="confirmation-title">
-          <div className="brand auth-brand" aria-label="Mini Robinhood">
-            <span className="brand-mark" aria-hidden="true">M</span>
-            <span>mini robinhood</span>
+          <div className="brand auth-brand" aria-label="Stock News Aggregator">
+            <span className="brand-mark" aria-hidden="true">S</span>
+            <span>Stock News Aggregator</span>
           </div>
           <p className="eyebrow">ONE MORE STEP</p>
           <h1 id="confirmation-title">Check your email.</h1>
@@ -30,8 +30,8 @@ export default function SignupPage() {
             <strong>{state.email}</strong>
           </div>
           <p className="auth-copy">
-            Open that link to confirm your account. You will return to Mini
-            Robinhood with your confirmed session.
+            Open that link to confirm your account. You will return to Stock News
+            Aggregator with your confirmed session.
           </p>
           <Link className="button button-light auth-submit auth-back-link" href="/">
             Back to sign in
@@ -44,9 +44,9 @@ export default function SignupPage() {
   return (
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="signup-title">
-        <div className="brand auth-brand" aria-label="Mini Robinhood">
-          <span className="brand-mark" aria-hidden="true">M</span>
-          <span>mini robinhood</span>
+        <div className="brand auth-brand" aria-label="Stock News Aggregator">
+          <span className="brand-mark" aria-hidden="true">S</span>
+          <span>Stock News Aggregator</span>
         </div>
         <p className="eyebrow">CREATE YOUR ACCOUNT</p>
         <h1 id="signup-title">Start your portfolio.</h1>
