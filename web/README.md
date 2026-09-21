@@ -6,7 +6,7 @@
 
 Stage A 至 D 已完成。真实价格、持仓计算、用户隔离和 Dashboard 新闻均已通过本地验收。
 
-Stage E1 本地部署准备、E2 公开仓库和首次 Vercel Production 部署已完成。网站现已上线：<https://stock-news-aggregator-lake.vercel.app>。下一步是配置 Supabase 生产回调并完成登录验收。
+Stage E1 本地部署准备、E2 公开仓库和首次 Vercel Production 部署已完成。网站现已上线：<https://stock-news-aggregator-dashboard.vercel.app>。下一步是配置 Supabase 生产回调并完成登录验收。
 
 GitHub 仓库：<https://github.com/yunzhuuuuu/stock-news-aggregator>。Vercel 应把 Root Directory 设为 `web`。
 
