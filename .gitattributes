@@ -1,0 +1,9 @@
+# Keep text files consistent when the project is edited from Windows and WSL.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending normalized.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary

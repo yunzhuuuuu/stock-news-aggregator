@@ -1,0 +1,12 @@
+# Keep local credentials out of version control at every project level.
+.env*
+!.env.example
+
+# JavaScript dependencies and generated Next.js output belong locally only.
+node_modules/
+.next/
+out/
+
+# Common local-only files.
+.DS_Store
+*.log
