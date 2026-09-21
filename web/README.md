@@ -6,9 +6,9 @@
 
 Stage A 至 D 已完成。真实价格、持仓计算、用户隔离和 Dashboard 新闻均已通过本地验收。
 
-Stage E1 本地部署准备已完成。下一步是 E2：建立远程仓库并创建 Vercel Preview。开始前需要用户选择远程仓库位置；不要把任何密钥粘贴到聊天中。
+Stage E1 本地部署准备和 E2 公开 GitHub 仓库已完成。下一步是从该仓库创建 Vercel Preview；不要把任何密钥粘贴到聊天中。
 
-本地 Git 仓库使用 `main` 分支，当前还没有远程地址，也没有上传任何文件。Vercel 应把 Root Directory 设为 `web`。
+GitHub 仓库：<https://github.com/yunzhuuuuu/stock-news-aggregator>。Vercel 应把 Root Directory 设为 `web`。
 
 本项目是个人、非商业的学习与作品展示项目。E1 本地准备和 Preview 构建可以继续；如果最终保持“任何人可注册”的公开模式，再确认供应商对公开多用户展示与缓存的允许范围，或限制为个人演示访问。
 
