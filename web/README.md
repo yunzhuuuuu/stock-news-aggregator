@@ -39,8 +39,6 @@ GitHub 仓库：<https://github.com/yunzhuuuuu/stock-news-aggregator>。Vercel �
 - 阶段 D 已完成：AAPL 真实新闻、五分钟缓存、BBPL 无效代码、标签切换、双账户和手机布局均通过验收。
 - 阶段 E 已完成规划，尚未开始修改部署配置或发布。
 
-完整历史和验证记录见项目根目录的 `PROGRESS.md`，总体技术设计见 `PLAN.md`。
-
 ## 启动网站
 
 在 WSL 中运行：
