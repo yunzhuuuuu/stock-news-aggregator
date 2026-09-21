@@ -6,11 +6,11 @@
 
 Stage A 至 D 已完成。真实价格、持仓计算、用户隔离和 Dashboard 新闻均已通过本地验收。
 
-Stage E1 本地部署准备、E2 公开仓库和首次 Vercel Production 部署已完成。网站现已上线：<https://stock-news-aggregator-dashboard.vercel.app>。下一步是配置 Supabase 生产回调并完成登录验收。
+Stage E1 本地部署准备、E2 公开仓库和首次 Vercel Production 部署已完成。网站现已上线：<https://stock-news-aggregator-dashboard.vercel.app>。生产登录、原有持仓、价格盈亏和新闻均已通过验收，只剩首次 Cron 定时运行待确认。
 
 GitHub 仓库：<https://github.com/yunzhuuuuu/stock-news-aggregator>。Vercel 应把 Root Directory 设为 `web`。
 
-本项目是个人、非商业的学习与作品展示项目。E1 本地准备和 Preview 构建可以继续；如果最终保持“任何人可注册”的公开模式，再确认供应商对公开多用户展示与缓存的允许范围，或限制为个人演示访问。
+本项目是个人、非商业的学习与作品展示项目，Production 已上线。如果最终保持“任何人可注册”的公开模式，需再确认供应商对公开多用户展示与缓存的允许范围，或限制为个人演示访问。
 
 不要手动修改 `news_api_usage` 或租约字段，也不要把 Marketaux token 发到聊天中。
 
@@ -37,7 +37,7 @@ GitHub 仓库：<https://github.com/yunzhuuuuu/stock-news-aggregator>。Vercel �
 - 阶段 B 已完成：注册、登录、退出、持仓持久化和双用户数据隔离均通过实际检查。
 - 阶段 C 已完成：真实价格、精确计算、SMA、无效代码、共享缓存和新增持仓即时刷新均通过验收。每日部署触发器留到阶段 E 配置。
 - 阶段 D 已完成：AAPL 真实新闻、五分钟缓存、BBPL 无效代码、标签切换、双账户和手机布局均通过验收。
-- 阶段 E 进行中：生产环境变量和首次部署已完成；公开页面及未授权 API 已通过线上检查，尚待 Supabase 生产回调、登录流程和 Cron 实际运行验收。
+- 阶段 E 进行中：环境变量、自动部署、生产回调、登录、持仓和新闻均通过线上验收；只剩 Cron 首次实际运行待确认。
 
 ## 启动网站
 
@@ -126,8 +126,8 @@ supabase/migrations/202609200002_create_news_cache.sql
 
 在 Supabase 中打开 **Authentication → URL Configuration**：
 
-- 本地 Site URL：`http://localhost:3000`
-- Redirect URLs：包含 `http://localhost:3000/**`
+- Production Site URL：`https://stock-news-aggregator-dashboard.vercel.app`
+- Redirect URLs：包含 `https://stock-news-aggregator-dashboard.vercel.app/**` 和 `http://localhost:3000/**`
 
 注册确认路由同时支持 Supabase 的 PKCE `code` 和服务端 `token_hash` 格式。若项目允许修改确认邮件模板，可使用：
 
