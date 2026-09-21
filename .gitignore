@@ -14,3 +14,4 @@ out/
 # Internal planning notes stay local and are not part of the public project.
 PLAN.md
 PROGRESS.md
+.vercel

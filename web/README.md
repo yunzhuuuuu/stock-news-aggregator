@@ -6,7 +6,7 @@
 
 Stage A 至 D 已完成。真实价格、持仓计算、用户隔离和 Dashboard 新闻均已通过本地验收。
 
-Stage E1 本地部署准备和 E2 公开 GitHub 仓库已完成。下一步是从该仓库创建 Vercel Preview；不要把任何密钥粘贴到聊天中。
+Stage E1 本地部署准备、E2 公开仓库和首次 Vercel Production 部署已完成。网站现已上线：<https://stock-news-aggregator-lake.vercel.app>。下一步是配置 Supabase 生产回调并完成登录验收。
 
 GitHub 仓库：<https://github.com/yunzhuuuuu/stock-news-aggregator>。Vercel 应把 Root Directory 设为 `web`。
 
@@ -37,7 +37,7 @@ GitHub 仓库：<https://github.com/yunzhuuuuu/stock-news-aggregator>。Vercel �
 - 阶段 B 已完成：注册、登录、退出、持仓持久化和双用户数据隔离均通过实际检查。
 - 阶段 C 已完成：真实价格、精确计算、SMA、无效代码、共享缓存和新增持仓即时刷新均通过验收。每日部署触发器留到阶段 E 配置。
 - 阶段 D 已完成：AAPL 真实新闻、五分钟缓存、BBPL 无效代码、标签切换、双账户和手机布局均通过验收。
-- 阶段 E 已完成规划，尚未开始修改部署配置或发布。
+- 阶段 E 进行中：生产环境变量和首次部署已完成；公开页面及未授权 API 已通过线上检查，尚待 Supabase 生产回调、登录流程和 Cron 实际运行验收。
 
 ## 启动网站
 
@@ -120,7 +120,7 @@ supabase/migrations/202609200002_create_news_cache.sql
 - Alpha Vantage `TIME_SERIES_DAILY` 的 compact 结果提供最近约 100 个交易日，写入时按 `symbol + trading_date` 更新共享缓存。
 - 股票逐个刷新；某只股票请求失败时继续处理其他股票，并保留该股票之前成功缓存的数据。
 - 新增或编辑持仓后立即检查该代码；12 小时内已有共享结果时直接复用，否则只刷新这一只股票。外部接口临时失败不会撤销已经保存的持仓。
-- GET 方法为阶段 E 的每日 Vercel Cron 预留；当前不自动运行，避免在本地开发期间意外消耗额度。
+- GET 方法供每日 Vercel Cron 使用；定时配置已经部署，未授权请求在线上返回 401，尚待首次定时运行后确认实际刷新结果。
 
 ## 注册和邮件确认设置
 
