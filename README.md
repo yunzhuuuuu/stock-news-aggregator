@@ -1,25 +1,45 @@
 # Stock News Aggregator
 
-A full-stack portfolio and market-news dashboard for tracking manually entered U.S. stock holdings. The application combines account-isolated positions, shared daily-price data, unrealized profit and loss, a transparent moving-average signal, and company news in one responsive interface.
+A full-stack portfolio and market-news dashboard for exploring a public example portfolio or tracking account-isolated U.S. stock holdings. The application combines shared daily-price data, unrealized profit and loss, lightweight price charts, a transparent moving-average signal, and company news in one responsive interface.
 
 This is a personal, non-commercial learning and portfolio project. It does not connect to brokerage accounts, execute trades, or provide investment advice.
 
 ## Live application
 
-[Open Stock News Aggregator](https://stock-news-aggregator-dashboard.vercel.app)
+Explore the app at [stock-news-aggregator-dashboard.vercel.app](https://stock-news-aggregator-dashboard.vercel.app)
+
 
 ## Highlights
 
-- Email-based signup, confirmation, login, and logout with Supabase Auth.
-- Private portfolios protected by PostgreSQL Row Level Security.
-- Manual position management for U.S. stock symbols, share quantities, and average costs.
-- Shared daily closing-price cache backed by Alpha Vantage.
-- Portfolio market value and unrealized profit/loss calculated with precise decimal arithmetic.
-- A documented SMA5/SMA20 demonstration signal with BUY, HOLD, SELL, and insufficient-data states.
-- Company news from Marketaux with a five-minute shared cache, refresh leases, request-budget protection, deduplication, and stale-cache fallback.
-- Responsive blue business interface for desktop and mobile.
-- Automated daily price refresh through Vercel Cron, plus an authenticated manual **Refresh All** action.
-- Automated tests for financial calculations, provider normalization, cache behavior, failure recovery, and client response validation.
+### See your portfolio at a glance
+
+![Public Stock News Aggregator dashboard with example holdings and featured news](docs/screenshots/dashboard-overview.png)
+
+See your portfolio’s overall performance and recent news in one place.
+
+- Review total market value and unrealized profit or loss.
+- Read featured stories with the related stock clearly labeled.
+- Start with three example holdings, then sign in to save your own portfolio.
+
+### Follow each stock
+
+![Detailed holding cards beside an AAPL overview and recent price chart](docs/screenshots/holding-details.png)
+
+Select any holding to open its detailed view.
+
+- Check the latest price, recent movement, average cost, market value, and unrealized P/L.
+- Switch the chart between one week, one month, three months, and all available history.
+- Use the **Overview**, **Signal**, and **News** tabs to compare performance, trends, and recent coverage.
+- Sign in to add, edit, remove, or refresh holdings.
+
+### Create your own portfolio
+
+![Stock News Aggregator sign-in page with links to create an account or continue with the public demo](docs/screenshots/sign-in.png)
+
+- Sign in to return to a saved portfolio.
+- Create an account to manage your own holdings.
+- Continue with the example portfolio without registering.
+- Keep your holdings private without connecting a brokerage account.
 
 ## Technology
 
@@ -35,13 +55,14 @@ This is a personal, non-commercial learning and portfolio project. It does not c
 
 ```text
 Browser
+  ├─ public demo or authenticated private portfolio
   ├─ authentication and portfolio forms
   ├─ Overview / Signal / News tabs
   └─ client-side news refresh while the News tab is visible
           │
           ▼
 Next.js application
-  ├─ Server Components load the signed-in user's dashboard
+  ├─ Server Components load public demo data or the signed-in user's dashboard
   ├─ Server Actions add, edit, delete, and refresh positions
   ├─ /api/news protects and coordinates news refreshes
   └─ /api/prices/refresh protects scheduled price refreshes
@@ -55,13 +76,14 @@ Supabase
   └─ shared article, symbol-link, lease, and usage tables
 ```
 
-Private portfolio rows are scoped to `auth.uid()`. Market prices and news are shared by symbol so multiple users do not create duplicate external API requests for the same public data.
+Private portfolio rows are scoped to `auth.uid()`. Guest access is read-only and limited to the three example symbols. Market prices and news are shared by symbol so multiple users do not create duplicate external API requests for the same public data.
 
 ## Repository structure
 
 ```text
 .
 ├─ README.md                  # Public project overview
+├─ docs/screenshots/          # README product screenshots
 ├─ web/                       # Deployable Next.js application
 │  ├─ src/app/                # Pages, Server Actions, and Route Handlers
 │  ├─ src/components/         # Authentication and dashboard interfaces
@@ -156,30 +178,17 @@ The signal is an explainable project feature, not an investment recommendation.
 
 - Users enter positions manually; the application never requests brokerage credentials.
 - Supabase RLS limits position reads and writes to the owning user.
-- The news endpoint accepts only symbols already present in the signed-in user's portfolio.
+- Guests may request news only for AAPL, META, and TSLA; signed-in users may request only symbols already present in their own portfolio.
+- Guest holding controls open a sign-in prompt instead of calling write actions.
 - Provider credentials and admin database access remain on the server.
 - The scheduled price endpoint requires a constant-time checked Bearer secret.
 - News refresh functions use a short database lease and a daily request budget to prevent duplicate or uncontrolled provider calls.
 - Provider failures preserve the last successful cache instead of deleting usable data.
 - `.env.local`, build output, Vercel link metadata, and local learning notes are excluded from Git.
 
-## Deployment
-
-The production application is deployed on Vercel with `web/` configured as the Root Directory. `web/vercel.json` schedules `/api/prices/refresh` once per day at 23:00 UTC. Production secrets are configured in Vercel and are not stored in this repository.
-
-Database migrations are applied to the Supabase project separately from the Vercel build. Supabase authentication redirect URLs must include the final production domain.
-
-## Current status
-
-The core application is implemented and deployed. Authentication, cross-user portfolio isolation, position persistence, price calculations, news caching, responsive layouts, and production login flows have been checked. The project includes 37 automated tests, and the latest local lint, test, and production-build checks pass.
-
-## Limitations
+## Limitations and disclaimer
 
 - Prices are daily closing prices, not real-time quotes.
 - Positions are current snapshots; the application does not store transaction history or calculate realized gains, taxes, or dividends.
-- External provider coverage, quotas, latency, and display rights remain subject to provider terms.
-- Public self-service registration should use a production SMTP provider rather than Supabase's limited test email service.
-
-## Disclaimer
-
-Stock News Aggregator is a learning project. It is not a brokerage, trading system, financial adviser, or source of investment recommendations.
+- Price and news availability depends on external data providers.
+- Stock News Aggregator is a learning project, not a brokerage, trading system, financial adviser, or source of investment recommendations.

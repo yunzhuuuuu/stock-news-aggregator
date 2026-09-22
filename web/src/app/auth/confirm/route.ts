@@ -37,5 +37,6 @@ export async function GET(request: NextRequest) {
     "authError",
     "The confirmation link is invalid or expired.",
   );
+  destination.pathname = "/login";
   return NextResponse.redirect(destination);
 }

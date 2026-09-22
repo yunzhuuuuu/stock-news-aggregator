@@ -63,6 +63,9 @@ export default function AuthPage({ authError }: { authError?: string }) {
         <Link className="button button-light auth-submit auth-back-link" href="/signup">
           Create account
         </Link>
+        <Link className="auth-text-link" href="/">
+          Continue with the public demo
+        </Link>
 
         <p className="auth-note">
           New accounts may need email confirmation before the first sign-in.

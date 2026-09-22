@@ -1,4 +1,4 @@
-import type { PositionMetrics } from "@/lib/finance/calculations";
+import type { DailyClose, PositionMetrics } from "@/lib/finance/calculations";
 import type { PriceRefreshStatus } from "@/lib/prices";
 
 /** A database row after Supabase converts snake_case column names. */
@@ -15,6 +15,7 @@ export type Position = {
 /** The Server Component attaches calculations before data reaches the UI. */
 export type PositionView = Position & {
   metrics: PositionMetrics;
+  priceHistory: DailyClose[];
   priceStatus: PriceRefreshStatus | null;
 };
 

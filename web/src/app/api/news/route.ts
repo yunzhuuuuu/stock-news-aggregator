@@ -9,6 +9,7 @@ import {
 import { createMarketauxProvider } from "@/lib/providers/marketaux";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { defaultHoldingSymbols } from "@/lib/default-holdings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,24 +24,29 @@ export async function GET(request: Request) {
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Sign in to view portfolio news." }, { status: 401 });
-  }
-
-  // The route cannot be used as a free arbitrary-symbol proxy. A user may
-  // spend shared news quota only for a symbol in their own RLS-protected list.
-  const { data: position, error: positionError } = await supabase
-    .from("positions")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("symbol", symbol)
-    .maybeSingle();
-  if (positionError) {
-    return NextResponse.json({ error: "Could not verify this holding." }, { status: 500 });
-  }
-  if (!position) {
+  if (user) {
+    // Signed-in users may spend shared news quota only for a symbol in their
+    // own RLS-protected portfolio.
+    const { data: position, error: positionError } = await supabase
+      .from("positions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("symbol", symbol)
+      .maybeSingle();
+    if (positionError) {
+      return NextResponse.json({ error: "Could not verify this holding." }, { status: 500 });
+    }
+    if (!position) {
+      return NextResponse.json(
+        { error: "News is available only for symbols in your portfolio." },
+        { status: 403 },
+      );
+    }
+  } else if (!defaultHoldingSymbols.has(symbol)) {
+    // Guests can explore news for the three public demo holdings without
+    // turning this route into an arbitrary-symbol provider proxy.
     return NextResponse.json(
-      { error: "News is available only for symbols in your portfolio." },
+      { error: "Sign in to view news for other portfolio symbols." },
       { status: 403 },
     );
   }
@@ -49,7 +55,7 @@ export async function GET(request: Request) {
     const admin = createAdminClient();
     const provider = createMarketauxProvider(process.env.MARKETAUX_API_TOKEN ?? "");
     const result = await refreshNewsCache({
-      loadCached: () => loadCachedNewsArticles(supabase, symbol),
+      loadCached: () => loadCachedNewsArticles(admin, symbol),
       claim: () => claimNewsRefresh(admin, symbol),
       fetchArticles: () => provider.fetchArticles([symbol]),
       persist: (articles) => persistNewsArticles(admin, articles),

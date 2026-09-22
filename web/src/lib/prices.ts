@@ -24,7 +24,10 @@ export type PriceRefreshStatusRow = {
 export type PriceRefreshStatuses = Record<string, PriceRefreshStatusRow>;
 
 /**
- * Fetch at most 20 rows per symbol. Separate queries make the per-symbol limit
+ * Fetch at most 100 rows per symbol. Alpha Vantage's compact daily response
+ * contains roughly that many trading days, which supports the lightweight
+ * recent-price chart without making a second request. Separate queries make
+ * the per-symbol limit
  * explicit; a single global limit could let one symbol crowd out the others.
  */
 export async function loadPriceHistories(
@@ -40,7 +43,7 @@ export async function loadPriceHistories(
         .select("symbol,trading_date,close,currency,provider,fetched_at")
         .eq("symbol", symbol)
         .order("trading_date", { ascending: false })
-        .limit(20);
+        .limit(100);
       return { symbol, data: (data ?? []) as DailyPriceRow[], error };
     }),
   );

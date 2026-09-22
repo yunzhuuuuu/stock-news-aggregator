@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { logout } from "@/app/auth/actions";
 import {
@@ -20,6 +21,10 @@ import {
   readNewsError,
   type NewsApiResponse,
 } from "@/lib/news/client";
+import PriceHistoryChart from "@/components/price-history-chart";
+import FeaturedNews from "@/components/featured-news";
+import { calculateLatestPriceChange } from "@/lib/finance/chart";
+import { selectFeaturedSymbols } from "@/lib/finance/featured";
 
 type DetailTab = "overview" | "signal" | "news";
 
@@ -53,6 +58,11 @@ function formatPercent(value: string | null) {
 function valueTone(value: string | null) {
   if (value === null || Number(value) === 0) return "value-neutral";
   return Number(value) > 0 ? "value-positive" : "value-negative";
+}
+
+function numberTone(value: number | null) {
+  if (value === null || value === 0) return "value-neutral";
+  return value > 0 ? "value-positive" : "value-negative";
 }
 
 const dateTime = new Intl.DateTimeFormat("en-US", {
@@ -286,6 +296,47 @@ function DeletePositionForm({ position }: { position: Position }) {
   );
 }
 
+function LoginPrompt({
+  action,
+  onClose,
+}: {
+  action: string | null;
+  onClose: () => void;
+}) {
+  if (!action) return null;
+
+  return (
+    <div className="login-prompt-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="login-prompt"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-prompt-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          className="login-prompt-close"
+          type="button"
+          onClick={onClose}
+          aria-label="Close sign-in prompt"
+        >
+          ×
+        </button>
+        <span className="login-prompt-icon" aria-hidden="true">S</span>
+        <p className="eyebrow">ACCOUNT REQUIRED</p>
+        <h2 id="login-prompt-title">Sign in to manage holdings.</h2>
+        <p>
+          You can explore prices and news as a guest. Sign in before you {action}.
+        </p>
+        <div className="login-prompt-actions">
+          <Link className="button button-primary" href="/login">Sign in</Link>
+          <Link className="button button-light" href="/signup">Create account</Link>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function SignalPanel({ position }: { position: PositionView }) {
   const invalidSymbol = position.priceStatus === "invalid_symbol";
   const insufficientData = position.metrics.signal === "INSUFFICIENT_DATA";
@@ -358,11 +409,13 @@ function SignalPanel({ position }: { position: PositionView }) {
  * actual portfolio data remains in Postgres and survives page refreshes.
  */
 export default function Dashboard({
+  isGuest,
   positions,
   portfolioSummary,
   priceCacheUnavailable,
   userEmail,
 }: {
+  isGuest: boolean;
   positions: PositionView[];
   portfolioSummary: PortfolioSummary;
   priceCacheUnavailable: boolean;
@@ -372,6 +425,7 @@ export default function Dashboard({
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [loginPromptAction, setLoginPromptAction] = useState<string | null>(null);
   const [refreshState, refreshAction, refreshPending] = useActionState(
     refreshAllPrices,
     emptyActionState,
@@ -383,6 +437,7 @@ export default function Dashboard({
 
   const selectedPosition =
     positions.find((position) => position.id === selectedId) ?? positions[0] ?? null;
+  const featuredSymbols = selectFeaturedSymbols(positions);
 
 
   return (
@@ -395,9 +450,13 @@ export default function Dashboard({
           </div>
           <div className="account-area">
             <span className="account-email">{userEmail}</span>
-            <form action={logout}>
-              <button className="topbar-button">Sign out</button>
-            </form>
+            {isGuest ? (
+              <Link className="topbar-button" href="/login">Sign in</Link>
+            ) : (
+              <form action={logout}>
+                <button className="topbar-button">Sign out</button>
+              </form>
+            )}
           </div>
         </div>
       </header>
@@ -412,16 +471,37 @@ export default function Dashboard({
               latest company news in one focused workspace.
             </p>
           </div>
-          <form className="refresh-form" action={refreshAction}>
+          {isGuest ? (
             <button
               className="button button-primary refresh-button"
-              disabled={refreshPending}
+              type="button"
+              onClick={() => setLoginPromptAction("refresh portfolio prices")}
             >
-              {refreshPending ? "Refreshing…" : "Refresh All"}
+              Refresh All
             </button>
-            <Feedback state={refreshState} />
-          </form>
+          ) : (
+            <form className="refresh-form" action={refreshAction}>
+              <button
+                className="button button-primary refresh-button"
+                disabled={refreshPending}
+              >
+                {refreshPending ? "Refreshing…" : "Refresh All"}
+              </button>
+              <Feedback state={refreshState} />
+            </form>
+          )}
         </section>
+
+        {isGuest && (
+          <div className="demo-notice" role="status">
+            <span className="notice-icon" aria-hidden="true">i</span>
+            <p>
+              <strong>You are viewing a public demo portfolio.</strong> Prices,
+              signals, charts, and news are available without an account. Sign in
+              when you want to change a holding.
+            </p>
+          </div>
+        )}
 
         {priceCacheUnavailable && (
           <div className="price-cache-notice" role="status">
@@ -436,9 +516,13 @@ export default function Dashboard({
 
         <section className="summary-grid" aria-label="Portfolio summary">
           <div className="summary-card">
-            <span className="summary-label">Saved holdings</span>
+            <span className="summary-label">
+              {isGuest ? "Example holdings" : "Saved holdings"}
+            </span>
             <strong className="summary-value">{positions.length}</strong>
-            <span className="summary-hint">Stored for this account</span>
+            <span className="summary-hint">
+              {isGuest ? "Public preview portfolio" : "Stored for this account"}
+            </span>
           </div>
           <div className="summary-card">
             <span className="summary-label">Portfolio market value</span>
@@ -469,6 +553,11 @@ export default function Dashboard({
           </div>
         </section>
 
+        <FeaturedNews
+          key={featuredSymbols.join(",")}
+          symbols={featuredSymbols}
+        />
+
         <div className="dashboard-grid">
           <aside className="panel holdings-panel" aria-labelledby="holdings-title">
             <div className="panel-heading">
@@ -476,15 +565,25 @@ export default function Dashboard({
                 <p className="eyebrow">MY ACCOUNT</p>
                 <h2 id="holdings-title">My holdings</h2>
               </div>
-              <button
-                className="button button-primary"
-                type="button"
-                onClick={() => setFormOpen((open) => !open)}
-                aria-expanded={formOpen}
-                aria-controls="add-holding-form"
-              >
-                {formOpen ? "Cancel" : "+ Add"}
-              </button>
+              {isGuest ? (
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={() => setLoginPromptAction("add a holding")}
+                >
+                  + Add
+                </button>
+              ) : (
+                <button
+                  className="button button-primary"
+                  type="button"
+                  onClick={() => setFormOpen((open) => !open)}
+                  aria-expanded={formOpen}
+                  aria-controls="add-holding-form"
+                >
+                  {formOpen ? "Cancel" : "+ Add"}
+                </button>
+              )}
             </div>
 
             {formOpen && (
@@ -507,51 +606,80 @@ export default function Dashboard({
               </div>
             ) : (
               <div className="holding-list">
-                {positions.map((position) => (
-                  <button
-                    key={position.id}
-                    type="button"
-                    className={
-                      "holding-item" +
-                      (selectedPosition?.id === position.id
-                        ? " holding-item-active"
-                        : "")
-                    }
-                    onClick={() => {
-                      setSelectedId(position.id);
-                      setActiveTab("overview");
-                      setEditing(false);
-                    }}
-                    aria-pressed={selectedPosition?.id === position.id}
-                  >
-                    <span className="stock-avatar" aria-hidden="true">
-                      {position.symbol.slice(0, 1)}
-                    </span>
-                    <span className="holding-name">
-                      <span className="holding-title-row">
-                        <strong>{position.symbol}</strong>
-                        <small>{formatMoney(position.metrics.latestClose)}</small>
+                {positions.map((position) => {
+                  const dailyChange = calculateLatestPriceChange(position.priceHistory);
+                  const signal = position.priceStatus === "invalid_symbol"
+                    ? "N/A"
+                    : position.metrics.signal === "INSUFFICIENT_DATA"
+                      ? "PENDING"
+                      : position.metrics.signal;
+                  const signalStyle = signal === "N/A"
+                    ? "unavailable"
+                    : signal.toLowerCase();
+                  return (
+                    <button
+                      key={position.id}
+                      type="button"
+                      className={
+                        "holding-item" +
+                        (selectedPosition?.id === position.id
+                          ? " holding-item-active"
+                          : "")
+                      }
+                      onClick={() => {
+                        setSelectedId(position.id);
+                        setActiveTab("overview");
+                        setEditing(false);
+                      }}
+                      aria-pressed={selectedPosition?.id === position.id}
+                    >
+                      <span className="holding-card-header">
+                        <span className="stock-avatar" aria-hidden="true">
+                          {position.symbol.slice(0, 1)}
+                        </span>
+                        <span className="holding-card-identity">
+                          <strong>{position.symbol}</strong>
+                          <small>{formatQuantity(position.quantity)} shares</small>
+                        </span>
+                        <span
+                          className={`holding-signal holding-signal-${signalStyle}`}
+                        >
+                          {signal}
+                        </span>
                       </span>
-                      <small className="holding-meta">
-                        {position.priceStatus === "invalid_symbol"
-                          ? "Invalid symbol"
-                          : `${formatQuantity(position.quantity)} shares · Avg. ${money.format(Number(position.average_cost))}`}
-                      </small>
-                    </span>
-                    <span className="holding-values">
-                      <strong>{formatMoney(position.metrics.marketValue)}</strong>
-                      <small className={valueTone(position.metrics.unrealizedProfitLoss)}>
-                        {position.metrics.unrealizedProfitLoss === null
-                          ? "P/L unavailable"
-                          : `${formatSignedMoney(position.metrics.unrealizedProfitLoss)} P/L`}
-                      </small>
-                    </span>
-                  </button>
-                ))}
+                      <span className="holding-card-price">
+                        <strong>{formatMoney(position.metrics.latestClose)}</strong>
+                        <small className={numberTone(dailyChange?.amount ?? null)}>
+                          {dailyChange
+                            ? `${dailyChange.amount > 0 ? "+" : ""}${money.format(dailyChange.amount)} (${dailyChange.percent > 0 ? "+" : ""}${dailyChange.percent.toFixed(2)}%)`
+                            : "Daily change unavailable"}
+                        </small>
+                      </span>
+                      <span className="holding-card-facts">
+                        <span>
+                          <small>Average cost</small>
+                          <strong>{money.format(Number(position.average_cost))}</strong>
+                        </span>
+                        <span>
+                          <small>Market value</small>
+                          <strong>{formatMoney(position.metrics.marketValue)}</strong>
+                        </span>
+                        <span>
+                          <small>Unrealized P/L</small>
+                          <strong className={valueTone(position.metrics.unrealizedProfitLoss)}>
+                            {formatSignedMoney(position.metrics.unrealizedProfitLoss)}
+                          </strong>
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
             <p className="panel-footnote">
-              Add, edit, and remove operations are checked again on the server.
+              {isGuest
+                ? "Sign in to save and manage your own portfolio."
+                : "Add, edit, and remove operations are checked again on the server."}
             </p>
           </aside>
 
@@ -569,11 +697,27 @@ export default function Dashboard({
                     <button
                       className="button button-light"
                       type="button"
-                      onClick={() => setEditing((value) => !value)}
+                      onClick={() => {
+                        if (isGuest) {
+                          setLoginPromptAction("edit a holding");
+                        } else {
+                          setEditing((value) => !value);
+                        }
+                      }}
                     >
                       {editing ? "Close edit" : "Edit"}
                     </button>
-                    <DeletePositionForm position={selectedPosition} />
+                    {isGuest ? (
+                      <button
+                        className="button button-danger"
+                        type="button"
+                        onClick={() => setLoginPromptAction("remove a holding")}
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <DeletePositionForm position={selectedPosition} />
+                    )}
                   </div>
                 </div>
 
@@ -654,6 +798,11 @@ export default function Dashboard({
                             : "No cached daily price is available for this symbol."}
                         </p>
                       </div>
+                      <PriceHistoryChart
+                        key={selectedPosition.symbol}
+                        history={selectedPosition.priceHistory}
+                        symbol={selectedPosition.symbol}
+                      />
                       <dl className="fact-grid">
                         <div>
                           <dt>Shares held</dt>
@@ -713,6 +862,10 @@ export default function Dashboard({
           or investment advice.
         </footer>
       </main>
+      <LoginPrompt
+        action={loginPromptAction}
+        onClose={() => setLoginPromptAction(null)}
+      />
     </div>
   );
 }

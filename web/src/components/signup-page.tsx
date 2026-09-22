@@ -33,7 +33,7 @@ export default function SignupPage() {
             Open that link to confirm your account. You will return to Stock News
             Aggregator with your confirmed session.
           </p>
-          <Link className="button button-light auth-submit auth-back-link" href="/">
+          <Link className="button button-light auth-submit auth-back-link" href="/login">
             Back to sign in
           </Link>
         </section>
@@ -101,7 +101,7 @@ export default function SignupPage() {
           Supabase handles the password and sends a confirmation email. This app
           never stores your password in the positions table.
         </p>
-        <Link className="auth-text-link" href="/">Already have an account? Sign in</Link>
+        <Link className="auth-text-link" href="/login">Already have an account? Sign in</Link>
       </section>
     </main>
   );
