@@ -10,6 +10,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadPriceHistories, loadPriceRefreshStatuses } from "@/lib/prices";
 import type { Position, PositionView } from "@/lib/positions";
 import { defaultHoldings } from "@/lib/default-holdings";
+import { loadFeaturedNewsPool } from "@/lib/news/featured-server";
+import { selectRandomFeaturedNews } from "@/lib/finance/featured";
 
 const demoCreatedAt = "2026-01-01T00:00:00.000Z";
 
@@ -57,16 +59,19 @@ export default async function Home() {
     const symbols = demoPositions.map((position) => position.symbol);
     let histories: Awaited<ReturnType<typeof loadPriceHistories>>["histories"] = {};
     let statuses: Awaited<ReturnType<typeof loadPriceRefreshStatuses>>["statuses"] = {};
+    let featuredNewsPool: Awaited<ReturnType<typeof loadFeaturedNewsPool>> = [];
     let priceCacheUnavailable = false;
 
     try {
       const admin = createAdminClient();
-      const [priceResult, statusResult] = await Promise.all([
+      const [priceResult, statusResult, newsPool] = await Promise.all([
         loadPriceHistories(admin, symbols),
         loadPriceRefreshStatuses(admin, symbols),
+        loadFeaturedNewsPool(symbols).catch(() => []),
       ]);
       histories = priceResult.histories;
       statuses = statusResult.statuses;
+      featuredNewsPool = newsPool;
       priceCacheUnavailable = Boolean(priceResult.error);
     } catch {
       priceCacheUnavailable = true;
@@ -80,6 +85,8 @@ export default async function Home() {
     return (
       <Dashboard
         isGuest
+        featuredNewsPool={featuredNewsPool}
+        initialFeaturedNews={selectRandomFeaturedNews(featuredNewsPool)}
         positions={dashboardPositions}
         portfolioSummary={calculatePortfolioSummary(
           dashboardPositions.map((position) => position.metrics),
@@ -99,9 +106,10 @@ export default async function Home() {
 
   const positions = (data ?? []) as Position[];
   const symbols = positions.map((position) => position.symbol);
-  const [priceResult, statusResult] = await Promise.all([
+  const [priceResult, statusResult, featuredNewsPool] = await Promise.all([
     loadPriceHistories(supabase, symbols),
     loadPriceRefreshStatuses(supabase, symbols),
+    loadFeaturedNewsPool(symbols).catch(() => []),
   ]);
   const { histories, error: priceError } = priceResult;
   const dashboardPositions = attachMarketData(
@@ -116,6 +124,8 @@ export default async function Home() {
   return (
     <Dashboard
       isGuest={false}
+      featuredNewsPool={featuredNewsPool}
+      initialFeaturedNews={selectRandomFeaturedNews(featuredNewsPool)}
       positions={dashboardPositions}
       portfolioSummary={portfolioSummary}
       priceCacheUnavailable={Boolean(priceError)}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import { logout } from "@/app/auth/actions";
 import {
@@ -24,7 +25,10 @@ import {
 import PriceHistoryChart from "@/components/price-history-chart";
 import FeaturedNews from "@/components/featured-news";
 import { calculateLatestPriceChange } from "@/lib/finance/chart";
-import { selectFeaturedSymbols } from "@/lib/finance/featured";
+import {
+  selectRandomFeaturedNews,
+  type FeaturedNewsItem,
+} from "@/lib/finance/featured";
 
 type DetailTab = "overview" | "signal" | "news";
 
@@ -410,22 +414,28 @@ function SignalPanel({ position }: { position: PositionView }) {
  */
 export default function Dashboard({
   isGuest,
+  featuredNewsPool,
+  initialFeaturedNews,
   positions,
   portfolioSummary,
   priceCacheUnavailable,
   userEmail,
 }: {
   isGuest: boolean;
+  featuredNewsPool: FeaturedNewsItem[];
+  initialFeaturedNews: FeaturedNewsItem[];
   positions: PositionView[];
   portfolioSummary: PortfolioSummary;
   priceCacheUnavailable: boolean;
   userEmail: string;
 }) {
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState(positions[0]?.id ?? "");
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [loginPromptAction, setLoginPromptAction] = useState<string | null>(null);
+  const [featuredNews, setFeaturedNews] = useState(initialFeaturedNews);
   const [refreshState, refreshAction, refreshPending] = useActionState(
     refreshAllPrices,
     emptyActionState,
@@ -437,8 +447,17 @@ export default function Dashboard({
 
   const selectedPosition =
     positions.find((position) => position.id === selectedId) ?? positions[0] ?? null;
-  const featuredSymbols = selectFeaturedSymbols(positions);
 
+  function shuffleFeaturedNews() {
+    setFeaturedNews((current) =>
+      selectRandomFeaturedNews(
+        featuredNewsPool,
+        2,
+        Math.random,
+        current.map(({ article }) => article.id),
+      ),
+    );
+  }
 
   return (
     <div className="app">
@@ -475,12 +494,19 @@ export default function Dashboard({
             <button
               className="button button-primary refresh-button"
               type="button"
-              onClick={() => setLoginPromptAction("refresh portfolio prices")}
+              onClick={() => {
+                shuffleFeaturedNews();
+                router.refresh();
+              }}
             >
               Refresh All
             </button>
           ) : (
-            <form className="refresh-form" action={refreshAction}>
+            <form
+              className="refresh-form"
+              action={refreshAction}
+              onSubmit={shuffleFeaturedNews}
+            >
               <button
                 className="button button-primary refresh-button"
                 disabled={refreshPending}
@@ -553,10 +579,7 @@ export default function Dashboard({
           </div>
         </section>
 
-        <FeaturedNews
-          key={featuredSymbols.join(",")}
-          symbols={featuredSymbols}
-        />
+        <FeaturedNews items={featuredNews} />
 
         <div className="dashboard-grid">
           <aside className="panel holdings-panel" aria-labelledby="holdings-title">

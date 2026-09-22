@@ -1,33 +1,39 @@
-type PositionForFeaturedNews = {
+import type { CachedNewsArticle } from "@/lib/news/types";
+
+export type FeaturedNewsItem = {
   symbol: string;
-  metrics: {
-    unrealizedProfitLoss: string | null;
-  };
+  article: CachedNewsArticle;
 };
 
-/**
- * Choose the highest and lowest unrealized P/L positions. The selection rule
- * stays in application logic and is not described in the user interface.
- */
-export function selectFeaturedSymbols(
-  positions: PositionForFeaturedNews[],
-): string[] {
-  const priced = positions
-    .map((position) => ({
-      symbol: position.symbol,
-      profitLoss: Number(position.metrics.unrealizedProfitLoss),
-      available: position.metrics.unrealizedProfitLoss !== null,
-    }))
-    .filter((position) => position.available && Number.isFinite(position.profitLoss))
-    .sort((a, b) => b.profitLoss - a.profitLoss);
+function deduplicate(items: FeaturedNewsItem[]) {
+  return [...new Map(
+    items.map((item) => [item.article.id, item]),
+  ).values()];
+}
 
-  if (priced.length >= 2) {
-    return [priced[0].symbol, priced.at(-1)!.symbol];
+/**
+ * Pick cached articles without replacement. When enough alternatives exist,
+ * refreshes exclude the currently displayed articles so the change is visible.
+ */
+export function selectRandomFeaturedNews(
+  items: FeaturedNewsItem[],
+  count = 2,
+  random: () => number = Math.random,
+  excludedArticleIds: string[] = [],
+): FeaturedNewsItem[] {
+  const unique = deduplicate(items);
+  const excluded = new Set(excludedArticleIds);
+  const alternatives = unique.filter((item) => !excluded.has(item.article.id));
+  const candidates = alternatives.length >= count ? alternatives : unique;
+  const shuffled = [...candidates];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [
+      shuffled[swapIndex],
+      shuffled[index],
+    ];
   }
 
-  const fallback = [
-    ...priced.map((position) => position.symbol),
-    ...positions.map((position) => position.symbol),
-  ];
-  return [...new Set(fallback)].slice(0, 2);
+  return shuffled.slice(0, count);
 }
